@@ -3,8 +3,10 @@
 import { useUsername } from "@/app/hooks/use-username";
 import { client } from "@/lib/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { format } from "date-fns";
+import { useRealtime } from "@/lib/realtime-client";
 
 const formatTimeRemaining = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -19,10 +21,11 @@ const Page = () => {
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { userName } = useUsername();
+  const router = useRouter();
 
   const roomId = params.roomId as string;
 
-  const { data: messages } = useQuery({
+  const { data: messages, refetch } = useQuery({
     queryKey: ["messages", roomId],
     queryFn: async () => {
       const res = await client.messages.get({ query: { roomId } });
@@ -38,6 +41,20 @@ const Page = () => {
       setCopyStatus("COPY");
     }, 2000);
   };
+
+  useRealtime({
+    channels: [roomId],
+    events: ["chat.message", "chat.destroy"],
+    onData: ({ event }) => {
+      if (event === "chat.message") {
+        refetch();
+      }
+
+      if (event === "chat.destroy") {
+        router.push("/?destroyed=true");
+      }
+    },
+  });
 
   const { mutate: sendMessage, isPending } = useMutation({
     mutationFn: async ({ text }: { text: string }) => {
@@ -95,6 +112,25 @@ const Page = () => {
             </p>
           </div>
         )}
+        {messages?.messages.map((msg) => (
+          <div key={msg.id} className="flex flex-col items-start">
+            <div className="max-w-[80%] group">
+              <div className="flex items-baseline gap-3 mb-1">
+                <span
+                  className={`text-sm font-bold ${msg.sender === userName ? "text-green-500" : "text-blue-500"}`}
+                >
+                  {msg.sender === userName ? "You" : msg.sender}
+                </span>
+                <span className="text-[10px] text-zinc-500">
+                  {format(msg.timestamp, "HH:mm")}
+                </span>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed break-all">
+                {msg.text}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="p-4 border-t border-zinc-800 bg-zinc-900/30">
@@ -112,6 +148,7 @@ const Page = () => {
                 if (e.key === "Enter" && input.trim() && !isPending) {
                   sendMessage({ text: input });
                   inputRef.current?.focus();
+                  setInput("");
                 }
               }}
               onChange={(e) => {
@@ -124,6 +161,7 @@ const Page = () => {
           <button
             onClick={() => {
               sendMessage({ text: input });
+              setInput("");
               inputRef.current?.focus();
             }}
             disabled={!input.trim() || isPending}
