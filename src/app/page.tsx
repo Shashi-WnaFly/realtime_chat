@@ -2,37 +2,12 @@
 
 import { client } from "@/lib/client";
 import { useMutation } from "@tanstack/react-query";
-import { nanoid } from "nanoid";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
-const ANIMALS = ["goat", "wolf", "giraffe", "penguin", "platypus", "cuckoo"];
-
-const generateId = () => {
-  return `anonymous-${ANIMALS[Math.floor(Math.random() * ANIMALS.length)]}-${nanoid(5)}`;
-};
-
-const STORAGE_KEY = "chat_username";
+import { useUsername } from "./hooks/use-username";
 
 export default function Home() {
-  const [userName, setUserName] = useState("");
+  const { userName } = useUsername();
   const router = useRouter();
-
-  useEffect(() => {
-    const name = () => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-
-      if (stored) {
-        setUserName(stored);
-        return;
-      }
-
-      const generated = generateId();
-      localStorage.setItem(STORAGE_KEY, generated);
-      setUserName(generated);
-    };
-    name();
-  }, []);
 
   const { mutate: createRoom } = useMutation({
     mutationFn: async () => {

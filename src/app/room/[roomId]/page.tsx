@@ -1,5 +1,8 @@
 "use client";
 
+import { useUsername } from "@/app/hooks/use-username";
+import { client } from "@/lib/client";
+import { useMutation } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -15,6 +18,7 @@ const Page = () => {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { userName } = useUsername();
 
   const roomId = params.roomId as string;
 
@@ -26,6 +30,15 @@ const Page = () => {
       setCopyStatus("COPY");
     }, 2000);
   };
+
+  const { mutate: sendMessage } = useMutation({
+    mutationFn: async ({ text }: { text: string }) => {
+      await client.room.post(
+        { sender: userName, text },
+        { query: { roomId } },
+      );
+    },
+  });
 
   return (
     <main className="flex flex-col h-screen max-h-screen overflow-hidden">
