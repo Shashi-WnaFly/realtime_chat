@@ -20,7 +20,7 @@ const rooms = new Elysia({ prefix: "/room" }).post("/", async () => {
   return { roomId };
 });
 
-const message = new Elysia({ prefix: "/message" }).use(authMiddleware).post(
+const messages = new Elysia({ prefix: "/messages" }).use(authMiddleware).post(
   "/",
   async ({ body, auth }) => {
     const { sender, text } = body;
@@ -61,7 +61,7 @@ const message = new Elysia({ prefix: "/message" }).use(authMiddleware).post(
   },
 );
 
-const app = new Elysia({ prefix: "/api" }).use(rooms);
+const app = new Elysia({ prefix: "/api" }).use(rooms).use(messages);
 
 export const GET = app.fetch;
 export const POST = app.fetch;
