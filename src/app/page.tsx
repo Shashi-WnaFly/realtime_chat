@@ -4,8 +4,17 @@ import { client } from "@/lib/client";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUsername } from "./hooks/use-username";
+import { Suspense } from "react";
 
 export default function Home() {
+  return (
+    <Suspense>
+      <Lobby />
+    </Suspense>
+  );
+}
+
+function Lobby() {
   const { userName } = useUsername();
   const router = useRouter();
   const searchParams = useSearchParams();
