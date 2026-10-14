@@ -28,6 +28,21 @@ const rooms = new Elysia({ prefix: "/room" })
       return { ttl: ttl > 0 ? ttl : 0 };
     },
     { query: z.object({ roomId: z.string() }) },
+  )
+  .delete(
+    "/",
+    async ({ auth }) => {
+      await Promise.all([
+        await redis.del(auth.roomId),
+        await redis.del(`messages:${auth.roomId}`),
+        await redis.del(`meta:${auth.roomId}`),
+      ]);
+
+      await realtime
+        .channel(auth.roomId)
+        .emit("chat.destroy", { isDestroyed: true });
+    },
+    { query: z.object({ roomId: z.string() }) },
   );
 
 const messages = new Elysia({ prefix: "/messages" })
@@ -61,11 +76,10 @@ const messages = new Elysia({ prefix: "/messages" })
 
       const remaining = await redis.ttl(`meta:${roomId}`);
 
-      await redis.expire(`messages:${roomId}`, remaining);
-
-      await redis.expire(`history:${roomId}`, remaining);
-
-      await redis.expire(roomId, remaining);
+      await Promise.all([
+        await redis.expire(`messages:${roomId}`, remaining),
+        await redis.expire(roomId, remaining),
+      ]);
     },
     {
       query: z.object({ roomId: z.string() }),
